@@ -200,7 +200,12 @@ def team(team_id):
     matches = db.session.query(GameMatch).join(MatchSchedule, GameMatch.match_ID == MatchSchedule.match_ID) \
         .filter(MatchSchedule.team_ID == team_id).all()
 
-    return render_template('team.html', team=team, matches=matches)
+    # Query players in the team using the drafts table
+    players_in_team = db.session.query(Player).join(Draft, Player.player_ID == Draft.player_ID) \
+        .filter(Draft.team_ID == team_id).all()
+
+    return render_template('team.html', team=team, matches=matches, players_in_team=players_in_team)
+
 
 @app.route('/match/<int:match_id>')
 def match(match_id):
