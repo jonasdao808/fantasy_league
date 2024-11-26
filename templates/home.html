@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Home</title>
+</head>
+<body>
+    <h1>Welcome to Your Home Page!</h1>
+
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Your Leagues</h2>
+    {% if leagues %}
+        <ul>
+            {% for league in leagues %}
+                <li>
+                    <a href="{{ url_for('league_page', league_id=league.league_ID) }}">{{ league.league_name }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You are not part of any leagues.</p>
+    {% endif %}
+    
+    <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>

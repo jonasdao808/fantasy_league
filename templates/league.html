@@ -1,0 +1,18 @@
+<h1>{{ league.league_name }}</h1>
+
+<h2>Teams in this League</h2>
+
+{% if teams %}
+    <ul>
+        {% for team in teams %}
+            <li>
+                <!-- Link to the team page -->
+                <a href="{{ url_for('team', team_id=team.team_ID) }}">
+                    {{ team.team_name }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No teams in this league yet.</p>
+{% endif %}

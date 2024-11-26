@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Welcome</title>
+</head>
+<body>
+    <h1>Welcome!</h1>
+
+    <!-- error messages if any -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <ul>
+            {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Login Form -->
+    <form action="{{ url_for('login') }}" method="POST">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+
+    <p>Don't have an account?</p>
+    <a href="{{ url_for('register') }}">Register</a>
+
+    <h2>Existing Leagues</h2>
+    {% if leagues %}
+        <ul>
+            {% for league in leagues %}
+                <li>{{ league.league_name }}</li>  <!-- Display league name -->
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No leagues available.</p>
+    {% endif %}
+</body>
+</html>
