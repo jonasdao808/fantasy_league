@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'hailee_yatin_jonas'
@@ -146,17 +147,53 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = bcrypt.generate_password_hash(request.form['password']).decode('utf-8')
+        full_name = request.form['full_name'].strip()
+        email = request.form['email'].strip()
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+
+        # Validation checks
+        if not full_name or not email or not username or not password:
+            flash('All fields are required!', 'danger')
+            return render_template('register.html')
+        if len(password) < 4:
+            flash('Password must be at least 4 characters long.', 'danger')
+            return render_template('register.html')
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            flash('Invalid email format.', 'danger')
+            return render_template('register.html')
         if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'danger')
-        else:
-            new_user = User(username=username, password=password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Registration successful! Please log in.', 'success')
-            return redirect(url_for('login'))
+            flash('Username already exists. Please choose a different username.', 'danger')
+            return render_template('register.html')
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered. Please use a different email.', 'danger')
+            return render_template('register.html')
+
+        # Generate a new user ID
+        last_user = User.query.order_by(User.user_ID.desc()).first()
+        new_user_id = last_user.user_ID + 1 if last_user else 10000000
+
+       
+
+        # Create the new user object
+        new_user = User(
+            user_ID=new_user_id,
+            full_name=full_name,
+            email=email,
+            username=username,
+            password=password
+        )
+
+        # Add to the database
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('Registration successful! Please log in.', 'success')
+        return redirect(url_for('welcome'))
+
     return render_template('register.html')
+
+
 
 @app.route('/home')
 def home():
