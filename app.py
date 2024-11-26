@@ -212,6 +212,11 @@ def home():
     
     return render_template('home.html', leagues=leagues)
 
+@app.route('/profile')
+def profile():
+    # Render the profile page (ensure 'profile.html' exists)
+    return render_template('profile.html')
+
 @app.route('/league/<int:league_id>')
 def league_page(league_id):
     # Fetch the league by ID
@@ -277,6 +282,8 @@ def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'info')
     return redirect(url_for('welcome'))
+
+
 
 if __name__ == '__main__':
     with app.app_context():
