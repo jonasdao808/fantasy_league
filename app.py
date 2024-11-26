@@ -93,6 +93,27 @@ class Draft(db.Model):
     def __repr__(self):
         return f'<Draft {self.draft_ID} - League {self.league_ID} - Team {self.team_ID} - Player {self.player_ID}>'
 
+class GameMatch(db.Model):
+    __tablename__ = 'game_match'
+    match_ID = db.Column(db.Numeric(8), primary_key=True)
+    match_date = db.Column(db.Date)
+    final_score = db.Column(db.String(10))
+    winner = db.Column(db.Numeric(8), db.ForeignKey('team.team_ID'))
+
+class MatchSchedule(db.Model):
+    __tablename__ = 'match_schedule'
+    match_ID = db.Column(db.Numeric(8), db.ForeignKey('game_match.match_ID'), primary_key=True)
+    team_ID = db.Column(db.Numeric(8), db.ForeignKey('team.team_ID'), primary_key=True)
+
+class MatchEvent(db.Model):
+    __tablename__ = 'match_event'
+    match_event_ID = db.Column(db.Numeric(10), primary_key=True)
+    player_ID = db.Column(db.Numeric(8), db.ForeignKey('player.player_ID'))
+    match_ID = db.Column(db.Numeric(8), db.ForeignKey('game_match.match_ID'))
+    event_type = db.Column(db.String(20))
+    event_time = db.Column(db.Time)
+    fantasy_points = db.Column(db.Numeric(6))
+
 
 
 # Routes
@@ -172,16 +193,41 @@ def league_page(league_id):
 
 @app.route('/team/<int:team_id>')
 def team(team_id):
-    # Fetch the team using its ID
+    # Fetch the team details
     team = Team.query.get_or_404(team_id)
 
-    # Query players drafted to this specific team
-    players_in_team = db.session.query(Player).join(Draft, Player.player_ID == Draft.player_ID) \
-        .filter(Draft.team_ID == team.team_ID).all()
+    # Query matches involving this team using the match_schedule table
+    matches = db.session.query(GameMatch).join(MatchSchedule, GameMatch.match_ID == MatchSchedule.match_ID) \
+        .filter(MatchSchedule.team_ID == team_id).all()
 
-    return render_template('team.html', team=team, players_in_team=players_in_team)
+    return render_template('team.html', team=team, matches=matches)
 
+@app.route('/match/<int:match_id>')
+def match(match_id):
+    # Fetch the match details
+    match = GameMatch.query.get_or_404(match_id)
 
+    # Fetch the teams involved in this match
+    teams = db.session.query(Team).join(MatchSchedule, Team.team_ID == MatchSchedule.team_ID) \
+        .filter(MatchSchedule.match_ID == match_id).all()
+
+    # Separate players by team
+    team1_players = db.session.query(Player).join(Draft, Player.player_ID == Draft.player_ID) \
+        .filter(Draft.team_ID == teams[0].team_ID).all()
+    team2_players = db.session.query(Player).join(Draft, Player.player_ID == Draft.player_ID) \
+        .filter(Draft.team_ID == teams[1].team_ID).all()
+
+    # Fetch events linked to this match
+    events = MatchEvent.query.filter_by(match_ID=match_id).all()
+
+    return render_template(
+        'match.html',
+        match=match,
+        teams=teams,
+        team1_players=team1_players,
+        team2_players=team2_players,
+        events=events
+    )
 
 
 @app.route('/logout')
