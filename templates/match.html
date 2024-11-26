@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Details</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .team-column {
+            width: 45%;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .team-column h3 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Match Details</h1>
+    <p>Date: {{ match.match_date }}</p>
+    <p>Final Score: {{ match.final_score }}</p>
+    <p>Winner: {{ teams[0].team_name if match.winner == teams[0].team_ID else teams[1].team_name }}</p>
+
+    <div class="container">
+        <!-- Team 1 -->
+        <div class="team-column">
+            <h3>{{ teams[0].team_name }}</h3>
+            <ul>
+                {% for player in team1_players %}
+                    <li>{{ player.full_name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="team-column">
+            <h3>{{ teams[1].team_name }}</h3>
+            <ul>
+                {% for player in team2_players %}
+                    <li>{{ player.full_name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <h2>Match Events</h2>
+    <ul>
+        {% for event in events %}
+            <li>
+                Player: {{ event.player_ID }}, Event: {{ event.event_type }},
+                Time: {{ event.event_time }}, Fantasy Points: {{ event.fantasy_points }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('team', team_id=teams[0].team_ID) }}">Back to Team Page</a>
+</body>
+</html>
