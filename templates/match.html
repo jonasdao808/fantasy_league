@@ -4,59 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Match Details</title>
-    <style>
-        .container {
-            display: flex;
-            justify-content: space-between;
-        }
-        .team-column {
-            width: 45%;
-            padding: 10px;
-            border: 1px solid #ddd;
-        }
-        .team-column h3 {
-            text-align: center;
-        }
-    </style>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Match Details</h1>
-    <p>Date: {{ match.match_date }}</p>
-    <p>Final Score: {{ match.final_score }}</p>
-    <p>Winner: {{ teams[0].team_name if match.winner == teams[0].team_ID else teams[1].team_name }}</p>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('home') }}">Fantasy League</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <div class="container">
-        <!-- Team 1 -->
-        <div class="team-column">
-            <h3>{{ teams[0].team_name }}</h3>
-            <ul>
-                {% for player in team1_players %}
-                    <li>{{ player.full_name }}</li>
-                {% endfor %}
-            </ul>
+    <!-- Match Details -->
+    <div class="container mt-5">
+        <div class="text-center">
+            <h1 class="display-4">Match Details</h1>
+            <p><strong>Date:</strong> {{ match.match_date }}</p>
+            <p><strong>Final Score:</strong> {{ match.final_score }}</p>
+            <p>
+                <strong>Winner:</strong> 
+                {{ teams[0].team_name if match.winner == teams[0].team_ID else teams[1].team_name }}
+            </p>
         </div>
 
-        <!-- Team 2 -->
-        <div class="team-column">
-            <h3>{{ teams[1].team_name }}</h3>
-            <ul>
-                {% for player in team2_players %}
-                    <li>{{ player.full_name }}</li>
-                {% endfor %}
-            </ul>
+        <!-- Teams Section -->
+        <div class="row mt-4">
+            <!-- Team 1 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3>{{ teams[0].team_name }}</h3>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for player in team1_players %}
+                            <li class="list-group-item">{{ player.full_name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Team 2 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3>{{ teams[1].team_name }}</h3>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for player in team2_players %}
+                            <li class="list-group-item">{{ player.full_name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Match Events -->
+        <div class="mt-5">
+            <h2>Match Events</h2>
+            {% if events %}
+                <ul class="list-group mt-3">
+                    {% for event in events %}
+                        <li class="list-group-item">
+                            <strong>Player:</strong> {{ event.player_ID }}, 
+                            <strong>Event:</strong> {{ event.event_type }}, 
+                            <strong>Time:</strong> {{ event.event_time }}, 
+                            <strong>Fantasy Points:</strong> {{ event.fantasy_points }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No events recorded for this match.</p>
+            {% endif %}
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-4">
+            <a href="{{ url_for('team', team_id=teams[0].team_ID) }}" class="btn btn-secondary">
+                Back to Team Page
+            </a>
         </div>
     </div>
 
-    <h2>Match Events</h2>
-    <ul>
-        {% for event in events %}
-            <li>
-                Player: {{ event.player_ID }}, Event: {{ event.event_type }},
-                Time: {{ event.event_time }}, Fantasy Points: {{ event.fantasy_points }}
-            </li>
-        {% endfor %}
-    </ul>
-
-    <a href="{{ url_for('team', team_id=teams[0].team_ID) }}">Back to Team Page</a>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
