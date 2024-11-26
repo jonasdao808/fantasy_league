@@ -212,10 +212,23 @@ def home():
     
     return render_template('home.html', leagues=leagues)
 
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    # Render the profile page (ensure 'profile.html' exists)
-    return render_template('profile.html')
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])  # Fetch the logged-in user
+
+    if request.method == 'POST':  # Handle account deletion
+        db.session.delete(user)
+        db.session.commit()
+        session.pop('user_id', None)  # Clear the session
+        flash('Your account has been deleted successfully.', 'info')
+        return redirect(url_for('welcome'))  # Redirect to the welcome page
+    
+    return render_template('profile.html', user=user)
+
 
 @app.route('/league/<int:league_id>')
 def league_page(league_id):
