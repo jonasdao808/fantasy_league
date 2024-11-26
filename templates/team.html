@@ -13,6 +13,18 @@
             <li>{{ player.full_name }} - {{ player.position }} - {{ player.team }}</li>
         {% endfor %}
     </ul>
+
+    <h2>Matches</h2>
+    <ul>
+        {% for match in matches %}
+            <li>
+                <a href="{{ url_for('match', match_id=match.match_ID) }}">
+                    Match on {{ match.match_date }} (Score: {{ match.final_score }})
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
     <a href="{{ url_for('league_page', league_id=team.league_ID) }}">Back to League</a>
 </body>
 </html>
