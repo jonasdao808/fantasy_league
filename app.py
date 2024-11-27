@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 import re
+from datetime import date
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'hailee_yatin_jonas'
@@ -114,6 +115,7 @@ class MatchEvent(db.Model):
     event_type = db.Column(db.String(20))
     event_time = db.Column(db.Time)
     fantasy_points = db.Column(db.Numeric(6))
+
 
 
 
@@ -230,6 +232,81 @@ def profile():
     return render_template('profile.html', user=user)
 
 
+@app.route('/waivers')
+def waivers():
+    # Query to get all players with availability_status = 'A'
+    available_players = Player.query.filter_by(availability_status='A').all()
+
+    # Get the current user's team ID
+    current_team_id = get_current_team_id()
+
+    return render_template('waivers.html', players=available_players, current_team_id=current_team_id)
+
+
+
+from flask import redirect, url_for, session, flash
+
+@app.route('/claim_player/<int:player_id>', methods=['GET'])
+def claim_player(player_id):
+    # Get the current user's team ID
+    current_team_id = get_current_team_id()  # Get current user's team ID
+
+    if not current_team_id:
+        flash('You need to have a team to claim players.', 'danger')
+        return redirect(url_for('home'))  # Redirect to home if no team is found
+
+    # Get the player from the database
+    player = Player.query.filter_by(player_ID=player_id).first()
+
+    if player and player.availability_status == 'A':  # Ensure player is available
+        # Mark the player as unavailable
+        player.availability_status = 'U'  # Mark as unavailable
+
+        # Fetch the team using the current team ID
+        team = Team.query.get(current_team_id)
+
+        if team:
+            # Create a new draft record for this player, linking the player to the team
+            new_draft = Draft(
+                league_ID=team.league_ID,  # Fetch league_ID from the team
+                team_ID=current_team_id, 
+                player_ID=player.player_ID,
+                draft_date=date.today(),  # Set the current date
+                draft_status='C'  # Set status as completed
+            )
+            db.session.add(new_draft)
+            
+            # Commit the changes to the database
+            db.session.commit()
+
+            # Flash a success message
+            flash(f'Player {player.full_name} has been successfully claimed and drafted to your team!', 'success')
+        else:
+            # Handle case where team is not found (this shouldn't happen if the team exists)
+            flash(f'Team not found.', 'error')
+
+    else:
+        # Flash an error message if the player is not available
+        flash('This player is not available for claiming.', 'error')
+
+    # Redirect back to the team page
+    return redirect(url_for('team', team_id=current_team_id))
+
+
+
+def get_current_team_id():
+    # Get the current user ID from the session
+    user_id = session.get('user_id')
+    
+    if user_id:
+        # Fetch the team of the logged-in user (ensure the user owns a team)
+        team = Team.query.filter_by(owner=user_id).first()  # Assuming one team per user for now
+        if team:
+            return team.team_ID
+    return None  # Return None if no team is found for the user
+
+
+
 @app.route('/league/<int:league_id>')
 def league_page(league_id):
     # Fetch the league by ID
@@ -260,6 +337,7 @@ def team(team_id):
         .filter(Draft.team_ID == team_id).all()
 
     return render_template('team.html', team=team, matches=matches, players_in_team=players_in_team)
+
 
 
 @app.route('/match/<int:match_id>')
