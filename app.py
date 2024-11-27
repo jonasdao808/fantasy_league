@@ -117,8 +117,6 @@ class MatchEvent(db.Model):
     fantasy_points = db.Column(db.Numeric(6))
 
 
-
-
 # Routes
 @app.route('/', methods=['GET', 'POST'])
 def welcome():
@@ -144,7 +142,6 @@ def login():
         else:
             flash('Username or password is incorrect.', 'warning')
             return render_template('welcome.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -195,8 +192,6 @@ def register():
 
     return render_template('register.html')
 
-
-
 @app.route('/home')
 def home():
     if 'user_id' not in session:
@@ -230,7 +225,6 @@ def profile():
         return redirect(url_for('welcome'))  # Redirect to the welcome page
     
     return render_template('profile.html', user=user)
-
 
 @app.route('/waivers')
 def waivers():
@@ -305,6 +299,9 @@ def get_current_team_id():
             return team.team_ID
     return None  # Return None if no team is found for the user
 
+def get_current_user_id():
+    user_id = session.get("user_id")
+    return user_id
 
 
 @app.route('/league/<int:league_id>')
@@ -366,6 +363,47 @@ def match(match_id):
         team2_players=team2_players,
         events=events
     )
+
+
+@app.route('/drop/<int:league_id>')
+def drop_page(league_id):
+    current_user = get_current_user_id()
+
+    team = Team.query.filter_by(owner=current_user, league_ID=league_id).first()
+    if not team:
+        flash("You don't have a team in this league.", "danger")
+        return redirect(url_for('league_page', league_id=league_id))
+    
+    players_in_team = db.session.query(Player).join(Draft, Player.player_ID == Draft.player_ID) \
+        .filter(Draft.team_ID == team.team_ID).all()
+    return render_template('drop.html', team=team, players=players_in_team)
+
+@app.route('/drop_player/<int:player_id>', methods=['POST'])
+def drop_player(player_id):
+    player = Player.query.get_or_404(player_id)
+    current_user = get_current_user_id()
+    team = Team.query.filter_by(owner=current_user).first()
+
+    if not team:
+        flash("You don't have a valid team.", "danger")
+        return redirect(url_for('home'))
+
+    # Find the Draft record linking this player to the current team
+    draft = Draft.query.filter_by(team_ID=team.team_ID, player_ID=player_id).first()
+
+    if draft:
+        # Remove the draft record
+        db.session.delete(draft)
+
+    # Update player availability
+    player.availability_status = 'A'  # Set as available
+
+    # Commit changes to the database
+    db.session.commit()
+
+    flash(f"{player.full_name} has been dropped and is now available.", "success")
+    return redirect(url_for('league_page', league_id=team.league_ID))
+
 
 
 @app.route('/logout')
