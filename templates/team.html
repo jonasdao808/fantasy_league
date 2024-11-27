@@ -41,16 +41,23 @@
         <!-- Players Section -->
         <h2 class="mt-4">Players</h2>
         {% if players_in_team %}
-            <ul class="list-group mt-3">
-                {% for player in players_in_team %}
-                    <li class="list-group-item">
-                        {{ player.full_name }} - {{ player.position }} - {{ player.team }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-muted mt-3">No players in this team yet.</p>
-        {% endif %}
+        <ul class="list-group mt-3">
+            {% for player in players_in_team %}
+                <li class="list-group-item">
+                    {{ player.full_name }} - {{ player.position }} - {{ player.team }} - {{ player.fantasy_points_scored }}
+                    
+                    {% if player.team == team.team_name and team.owner == current_user.user_ID %}
+                        <!-- Only show the drop button if this player is part of the user's team -->
+                        <form action="{{ url_for('drop_player', player_id=player.player_ID) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Drop</button>
+                        </form>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mt-3">No players in this team yet.</p>
+    {% endif %}
 
         <!-- Matches Section -->
         <h2 class="mt-4">Matches</h2>
