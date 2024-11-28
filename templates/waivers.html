@@ -57,7 +57,8 @@
                             <td>{{ player.sport }}</td>
                             <td>{{ player.fantasy_points_scored }}</td>
                             <td>
-                                <a href="{{ url_for('claim_player', player_id=player.player_ID) }}" class="btn btn-success">Claim</a>
+                                <a href="{{ url_for('claim_player', team_id=current_team_id, player_id=player.player_ID) }}" class="btn btn-success">Claim</a>
+
                             </td>
                         </tr>
                     {% endfor %}
