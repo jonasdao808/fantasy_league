@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 import re
 from datetime import date
+from flask import redirect, url_for, session, flash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'hailee_yatin_jonas'
@@ -116,6 +117,35 @@ class MatchEvent(db.Model):
     event_time = db.Column(db.Time)
     fantasy_points = db.Column(db.Numeric(6))
 
+class Trade(db.Model):
+    __tablename__ = "trade"
+    trade_ID = db.Column(db.Integer, primary_key=True)
+    trade_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(64))  # Status of the trade (Pending, Accepted, Rejected)
+    proposer = db.Column(db.Integer, db.ForeignKey('team.team_ID'), nullable=False)  # Team proposing the trade
+    accepter = db.Column(db.Integer, db.ForeignKey('team.team_ID'), nullable=False)  # Team accepting the trade
+
+    # Relationship to get the team proposing the trade
+    proposer_team = db.relationship('Team', foreign_keys=[proposer], backref='proposed_trades')
+    # Relationship to get the team accepting the trade
+    accepter_team = db.relationship('Team', foreign_keys=[accepter], backref='accepted_trades')
+
+class TradingTeams(db.Model):
+    __tablename__ = "trading_teams"
+    trade_ID = db.Column(db.Integer, db.ForeignKey('trade.trade_ID'), primary_key=True)
+    team_ID = db.Column(db.Integer, db.ForeignKey('team.team_ID'), primary_key=True)
+
+class TradedPlayers(db.Model):
+    __tablename__ = "traded_players"
+    trade_ID = db.Column(db.Integer, db.ForeignKey('trade.trade_ID'), primary_key=True)
+    player_ID = db.Column(db.Integer, db.ForeignKey('player.player_ID'), primary_key=True)
+    original_team_ID = db.Column(db.Integer, db.ForeignKey('team.team_ID'), nullable=False)  # Original team of the player
+
+    # Relationship to get the player associated with the trade
+    player = db.relationship('Player', backref='traded_players')
+    # Relationship to get the original team of the player
+    original_team = db.relationship('Team', foreign_keys=[original_team_ID], backref='players_traded')
+
 
 # Routes
 @app.route('/', methods=['GET', 'POST'])
@@ -228,65 +258,53 @@ def profile():
 
 @app.route('/waivers')
 def waivers():
-    # Query to get all players with availability_status = 'A'
     available_players = Player.query.filter_by(availability_status='A').all()
-
-    # Get the current user's team ID
     current_team_id = get_current_team_id()
+    current_team = Team.query.get(current_team_id)  # Fetch the current team object
 
-    return render_template('waivers.html', players=available_players, current_team_id=current_team_id)
+    return render_template(
+        'waivers.html',
+        players=available_players,
+        current_team_id=current_team_id,
+        team=current_team  # Pass the team object
+    )
 
+@app.route('/claim_player/<int:team_id>/<int:player_id>', methods=['GET'])
+def claim_player(team_id, player_id):
+    player = Player.query.get_or_404(player_id)
+    team = Team.query.get_or_404(team_id)
 
+    if not player or player.availability_status != 'A':  # Ensure player is available
+        flash('This player is not available for claiming.', "danger")
+        return False
 
-from flask import redirect, url_for, session, flash
+    if not team:
+        flash("Specified team not found.", "danger")
+        return False
 
-@app.route('/claim_player/<int:player_id>', methods=['GET'])
-def claim_player(player_id):
-    # Get the current user's team ID
-    current_team_id = get_current_team_id()  # Get current user's team ID
+    # Mark the player as unavailable
+    player.availability_status = 'U'
 
-    if not current_team_id:
-        flash('You need to have a team to claim players.', 'danger')
-        return redirect(url_for('home'))  # Redirect to home if no team is found
+    # Get the highest draft_ID currently in the database and increment by 1
+    max_draft_id = db.session.query(db.func.max(Draft.draft_ID)).scalar() or 0
+    new_draft_id = max_draft_id + 1
 
-    # Get the player from the database
-    player = Player.query.filter_by(player_ID=player_id).first()
+    # Create a new draft record for this player, linking the player to the team
+    new_draft = Draft(
+        draft_ID=new_draft_id,
+        league_ID=team.league_ID,
+        team_ID=team_id,
+        player_ID=player_id,
+        draft_date=date.today(),
+        draft_status='C'
+    )
+    db.session.add(new_draft)
 
-    if player and player.availability_status == 'A':  # Ensure player is available
-        # Mark the player as unavailable
-        player.availability_status = 'U'  # Mark as unavailable
+    # Commit the changes to the database
+    db.session.commit()
 
-        # Fetch the team using the current team ID
-        team = Team.query.get(current_team_id)
-
-        if team:
-            # Create a new draft record for this player, linking the player to the team
-            new_draft = Draft(
-                league_ID=team.league_ID,  # Fetch league_ID from the team
-                team_ID=current_team_id, 
-                player_ID=player.player_ID,
-                draft_date=date.today(),  # Set the current date
-                draft_status='C'  # Set status as completed
-            )
-            db.session.add(new_draft)
-            
-            # Commit the changes to the database
-            db.session.commit()
-
-            # Flash a success message
-            flash(f'Player {player.full_name} has been successfully claimed and drafted to your team!', 'success')
-        else:
-            # Handle case where team is not found (this shouldn't happen if the team exists)
-            flash(f'Team not found.', 'error')
-
-    else:
-        # Flash an error message if the player is not available
-        flash('This player is not available for claiming.', 'error')
-
-    # Redirect back to the team page
-    return redirect(url_for('team', team_id=current_team_id))
-
-
+    flash(f'Player {player.full_name} has been successfully claimed by team {team_id}!', "success")
+    return redirect(url_for('team', team_id=team_id))
 
 def get_current_team_id():
     # Get the current user ID from the session
@@ -303,7 +321,6 @@ def get_current_user_id():
     user_id = session.get("user_id")
     return user_id
 
-
 @app.route('/league/<int:league_id>')
 def league_page(league_id):
     # Fetch the league by ID
@@ -317,8 +334,6 @@ def league_page(league_id):
     teams = Team.query.filter_by(league_ID=league_id).all()
 
     return render_template('league.html', league=league, teams=teams)
-
-
 
 @app.route('/team/<int:team_id>')
 def team(team_id):
@@ -334,8 +349,6 @@ def team(team_id):
         .filter(Draft.team_ID == team_id).all()
 
     return render_template('team.html', team=team, matches=matches, players_in_team=players_in_team)
-
-
 
 @app.route('/match/<int:match_id>')
 def match(match_id):
@@ -364,7 +377,6 @@ def match(match_id):
         events=events
     )
 
-
 @app.route('/drop/<int:league_id>')
 def drop_page(league_id):
     current_user = get_current_user_id()
@@ -378,41 +390,192 @@ def drop_page(league_id):
         .filter(Draft.team_ID == team.team_ID).all()
     return render_template('drop.html', team=team, players=players_in_team)
 
-@app.route('/drop_player/<int:player_id>', methods=['POST'])
-def drop_player(player_id):
+@app.route('/drop_player/<int:team_id>/<int:player_id>', methods=['POST'])
+def drop_player(team_id, player_id):
+    team = Team.query.get_or_404(team_id)
     player = Player.query.get_or_404(player_id)
-    current_user = get_current_user_id()
-    team = Team.query.filter_by(owner=current_user).first()
 
-    if not team:
-        flash("You don't have a valid team.", "danger")
-        return redirect(url_for('home'))
-
-    # Find the Draft record linking this player to the current team
-    draft = Draft.query.filter_by(team_ID=team.team_ID, player_ID=player_id).first()
-
+    draft = Draft.query.filter_by(team_ID=team_id, player_ID=player_id).first()
     if draft:
-        # Remove the draft record
         db.session.delete(draft)
 
-    # Update player availability
     player.availability_status = 'A'  # Set as available
-
-    # Commit changes to the database
     db.session.commit()
 
-    flash(f"{player.full_name} has been dropped and is now available.", "success")
+    flash(f"{player.full_name} has been dropped from team {team_id} and is now available.", "success")
     return redirect(url_for('league_page', league_id=team.league_ID))
 
+@app.route('/propose_new_trade/<int:team_id>', methods=['GET', 'POST'])
+def propose_new_trade(team_id):
+    # Get the team being traded with
+    other_team = Team.query.get_or_404(team_id)
 
+    # Get the current user's team
+    current_user_team_id = get_current_team_id()
+    current_team = Team.query.get_or_404(current_user_team_id)
+
+    # Get players from both teams
+    other_team_players = Player.query.join(Draft).filter(Draft.team_ID == team_id).all()
+    current_team_players = Player.query.join(Draft).filter(Draft.team_ID == current_user_team_id).all()
+
+    if request.method == 'POST':
+        # Create a new trade record
+        new_trade = Trade(trade_date=date.today())
+        db.session.add(new_trade)
+        db.session.flush()  # Get the trade_ID after insert
+
+        # Add teams involved in the trade
+        db.session.add_all([
+            TradingTeams(trade_ID=new_trade.trade_ID, team_ID=current_user_team_id),
+            TradingTeams(trade_ID=new_trade.trade_ID, team_ID=team_id)
+        ])
+
+        # Add players involved in the trade
+        selected_other_team_players = request.form.getlist('other_team_players')
+        selected_current_team_players = request.form.getlist('current_team_players')
+
+        for player_id in selected_other_team_players:
+            db.session.add(TradedPlayers(trade_ID=new_trade.trade_ID, player_ID=player_id))
+        
+        for player_id in selected_current_team_players:
+            db.session.add(TradedPlayers(trade_ID=new_trade.trade_ID, player_ID=player_id))
+
+        db.session.commit()
+
+        flash('Trade proposal has been sent!', 'success')
+        return redirect(url_for('team', team_id=current_user_team_id))
+
+    return render_template(
+        'propose_new_trade.html',
+        other_team=other_team,
+        current_team=current_team,
+        other_team_players=other_team_players,
+        current_team_players=current_team_players
+    )
+
+#     current_user_team_id = get_current_team_id()
+
+#     # Fetch trades where the current user's team is involved and dynamically determine the receiving team
+#     received_trades = (
+#         db.session.query(Trade.trade_ID, Trade.trade_date)
+#         .join(TradingTeams, Trade.trade_ID == TradingTeams.trade_ID)
+#         .filter(TradingTeams.team_ID != current_user_team_id)  # Exclude the current user's team
+#         .filter(Trade.status == 'Pending')  # Assuming there's a trade_status field
+#         .all()
+#     )
+
+#     if request.method == 'POST':
+#         trade_id = request.form.get('trade_id')
+#         action = request.form.get('action')
+#         trade = Trade.query.get(trade_id)
+
+#         if trade and action in ['accept', 'reject']:
+#             if action == 'accept':
+#                 # Swap players between teams
+#                 offered_players = [int(pid) for pid in trade.offered_players.split(',')]
+#                 requested_players = [int(pid) for pid in trade.requested_players.split(',')]
+
+#                 for player_id in offered_players:
+#                     drop_player(player_id)
+#                     claim_player(player_id)
+
+#                 for player_id in requested_players:
+#                     drop_player(player_id)
+#                     claim_player(player_id)
+
+#                 trade.status = 'Accepted'
+#             else:
+#                 trade.status = 'Rejected'
+
+#             db.session.commit()
+#             flash(f'Trade {action}ed successfully.', 'success')
+
+#     return render_template('proposed_trades.html', trades=received_trades)
+
+@app.route('/proposed_trades', methods=['GET', 'POST'])
+def proposed_trades_page():
+    current_user_team_id = get_current_team_id()
+
+    # Fetch trades where the current user is the accepter
+    received_trades = (
+        db.session.query(Trade.trade_ID, Trade.trade_date, Trade.proposer, Trade.accepter)
+        .filter(Trade.accepter == current_user_team_id)
+        .filter(Trade.status == 'Pending')
+        .all()
+    )
+
+    # Prepare trade details with player information
+    trade_details = []
+    for trade_id, trade_date, proposer_team_id, accepter_team_id in received_trades:
+        offered_players = (
+            db.session.query(Player.player_ID, Player.full_name)
+            .join(TradedPlayers, Player.player_ID == TradedPlayers.player_ID)
+            .filter(TradedPlayers.trade_ID == trade_id)
+            .filter(TradedPlayers.original_team_ID == proposer_team_id)
+            .all()
+        )
+
+        requested_players = (
+            db.session.query(Player.player_ID, Player.full_name)
+            .join(TradedPlayers, Player.player_ID == TradedPlayers.player_ID)
+            .filter(TradedPlayers.trade_ID == trade_id)
+            .filter(TradedPlayers.original_team_ID == accepter_team_id)
+            .all()
+        )
+
+        trade_details.append({
+            'trade_id': trade_id,
+            'trade_date': trade_date,
+            'offered_players': [p[1] for p in offered_players],
+            'requested_players': [p[1] for p in requested_players],
+            'proposer_team': proposer_team_id,
+            'accepter_team': accepter_team_id
+        })
+
+    if request.method == 'POST':
+        trade_id = request.form.get('trade_id')
+        action = request.form.get('action')
+        trade = Trade.query.get(trade_id)
+
+        if trade and action in ['accept', 'reject']:
+            if action == 'accept':
+                offered_players = (
+                    db.session.query(TradedPlayers.player_ID)
+                    .filter(TradedPlayers.trade_ID == trade_id)
+                    .filter(TradedPlayers.original_team_ID == trade.proposer)
+                    .all()
+                )
+
+                requested_players = (
+                    db.session.query(TradedPlayers.player_ID)
+                    .filter(TradedPlayers.trade_ID == trade_id)
+                    .filter(TradedPlayers.original_team_ID == trade.accepter)
+                    .all()
+                )
+
+                # Perform the player swap
+                for player_id, in offered_players:
+                    drop_player(player_id, trade.proposer)
+                    claim_player(player_id, trade.accepter)
+
+                for player_id, in requested_players:
+                    drop_player(player_id, trade.accepter)
+                    claim_player(player_id, trade.proposer)
+
+                trade.status = 'Accepted'
+            else:
+                trade.status = 'Rejected'
+
+            db.session.commit()
+            flash(f'Trade {action}ed successfully.', "success")
+
+    return render_template('proposed_trades.html', trades=trade_details)
 
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'info')
     return redirect(url_for('welcome'))
-
-
 
 if __name__ == '__main__':
     with app.app_context():
