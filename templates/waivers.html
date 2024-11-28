@@ -38,6 +38,16 @@
     <!-- Main Content -->
     <div class="container mt-4">
         <h1 class="text-center">Available Players</h1>
+
+        <!-- Sorting Dropdown -->
+        <form method="GET" action="{{ url_for('waivers') }}" class="mb-3">
+            <label for="sort" class="form-label">Sort by:</label>
+            <select name="sort" id="sort" class="form-select" onchange="this.form.submit()">
+                <option value="name" {% if sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
+            </select>
+        </form>
+        
         {% if players %}
             <table class="table table-striped table-hover mt-3">
                 <thead class="table-dark">
