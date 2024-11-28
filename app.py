@@ -28,6 +28,8 @@ class User(db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(64), nullable=False)
     profile_settings = db.Column(db.String(64))
+    admin = db.Column(db.Boolean, default=False)
+    
 
 class League(db.Model):
     __tablename__ = 'league'
@@ -237,7 +239,21 @@ def home():
     # Get the leagues associated with these teams
     leagues = [team.league for team in user_teams]
     
-    return render_template('home.html', leagues=leagues)
+    return render_template('home.html', leagues=leagues, is_admin=user.admin)
+
+@app.route('/edit_database')
+def edit_database():
+    # Ensure only admins can access this page
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user.admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('home'))
+
+    return render_template('edit_database.html')
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
