@@ -258,7 +258,15 @@ def profile():
 
 @app.route('/waivers')
 def waivers():
-    available_players = Player.query.filter_by(availability_status='A').all()
+    # Get the sorting option from the request
+    sort = request.args.get('sort', 'name')  # Default sort is 'name'
+
+    # Fetch available players and apply sorting
+    if sort == 'position':
+        available_players = Player.query.filter_by(availability_status='A').order_by(Player.position).all()
+    else:  # Default is sorting by name
+        available_players = Player.query.filter_by(availability_status='A').order_by(Player.full_name).all()
+
     current_team_id = get_current_team_id()
     current_team = Team.query.get(current_team_id)  # Fetch the current team object
 
@@ -266,7 +274,8 @@ def waivers():
         'waivers.html',
         players=available_players,
         current_team_id=current_team_id,
-        team=current_team  # Pass the team object
+        team=current_team,  # Pass the team object
+        sort=sort  # Pass the current sort option
     )
 
 @app.route('/claim_player/<int:team_id>/<int:player_id>', methods=['GET'])
@@ -450,7 +459,6 @@ def propose_new_trade(team_id):
         current_team_players=current_team_players
     )
 
-
 @app.route('/proposed_trades/<int:league_id>', methods=['GET', 'POST'])
 def proposed_trades_page(league_id):
     # Get the current user's team ID
@@ -554,7 +562,6 @@ def proposed_trades_page(league_id):
         return render_template('proposed_trades.html', trades=trade_details, team=team)
 
     return render_template('proposed_trades.html', trades=trade_details, team=team)
-
 
 @app.route('/logout')
 def logout():
