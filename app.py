@@ -73,8 +73,8 @@ class Player(db.Model):
     sport = db.Column(db.String(3), nullable=False)  # Sport type (e.g., 'NFL', 'NBA')
     position = db.Column(db.String(3), nullable=False)  # Position (e.g., 'QB', 'RB')
     team = db.Column(db.String(50), nullable=False)  # The team the player is associated with
-    fantasy_points_scored = db.Column(db.Numeric(6))  # Fantasy points scored by the player
-    availability_status = db.Column(db.String(1))  # Availability status (e.g., 'A' for active)
+    fantasy_points_scored = db.Column(db.Numeric(6), default=0)  # Fantasy points scored by the player
+    availability_status = db.Column(db.String(1), default="A")  # Availability status (e.g., 'A' for available)
 
     def __repr__(self):
         return f'<Player {self.full_name} ({self.player_ID})>'
@@ -254,6 +254,68 @@ def edit_database():
         return redirect(url_for('home'))
 
     return render_template('edit_database.html')
+
+@app.route('/edit_players')
+def edit_players():
+    # Ensure only admins can access this page
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user.admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('home'))
+
+    # Get all players from the database
+    players = Player.query.all()
+
+    return render_template('edit_players.html', players=players)
+
+@app.route('/add_player', methods=['GET', 'POST'])
+def add_player():
+    # Ensure only admins can access this page
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user.admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        # Get data from the form
+        full_name = request.form['full_name']
+        sport = request.form['sport']
+        position = request.form['position']
+        team = request.form['team']
+        fantasy_points_scored = request.form['fantasy_points_scored']
+
+        # Find the highest player_ID in the database
+        highest_player_id = db.session.query(db.func.max(Player.player_ID)).scalar()
+        # If there are no players, start with 1, otherwise increment the highest player_ID
+        new_player_id = highest_player_id + 1 if highest_player_id is not None else 1
+
+        # Create a new Player object with the new player_ID
+        new_player = Player(
+            player_ID=new_player_id,  # Set player_ID to the next available ID
+            full_name=full_name,
+            sport=sport,
+            position=position,
+            team=team,
+            fantasy_points_scored=fantasy_points_scored,
+            availability_status=request.form.get('availability_status', 'A')  # Default to 'A' if not provided
+        )
+
+        # Add the player to the database
+        db.session.add(new_player)
+        db.session.commit()
+
+        flash(f'Player {full_name} added successfully!', 'success')
+        return redirect(url_for('edit_players'))
+
+    return render_template('add_player.html')
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
