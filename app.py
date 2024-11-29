@@ -20,6 +20,9 @@ bcrypt = Bcrypt(app)
 with app.app_context():
     db.create_all()  # This creates tables based on your models
 
+
+
+
 class User(db.Model):
     __tablename__ = 'user'  # This tells SQLAlchemy to use the existing 'user' table
     user_ID = db.Column(db.Integer, primary_key=True)  # user_ID as primary key
@@ -30,7 +33,6 @@ class User(db.Model):
     profile_settings = db.Column(db.String(64))
     admin = db.Column(db.Boolean, default=False)
     
-
 class League(db.Model):
     __tablename__ = 'league'
     league_ID = db.Column(db.Numeric(8), primary_key=True)  # Numeric type for league ID
@@ -149,6 +151,14 @@ class TradedPlayers(db.Model):
     original_team = db.relationship('Team', foreign_keys=[original_team_ID], backref='players_traded')
 
 
+with app.app_context():
+    users = User.query.all()
+    for user in users:
+        if not user.password.startswith('$2b$'):  # Check if password is not hashed
+            hashed_password = bcrypt.generate_password_hash(user.password).decode('utf-8')
+            user.password = hashed_password
+            db.session.commit()
+            
 # Routes
 @app.route('/', methods=['GET', 'POST'])
 def welcome():
@@ -165,7 +175,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         
         # Check if user exists and password matches
-        if user and user.password==password:
+        if user and bcrypt.check_password_hash(user.password, password):
             # Store the user ID in the session
             session['user_id'] = user.user_ID  # Save user ID to session
             
@@ -204,7 +214,7 @@ def register():
         last_user = User.query.order_by(User.user_ID.desc()).first()
         new_user_id = last_user.user_ID + 1 if last_user else 10000000
 
-       
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
         # Create the new user object
         new_user = User(
@@ -212,7 +222,7 @@ def register():
             full_name=full_name,
             email=email,
             username=username,
-            password=password
+            password=hashed_password
         )
 
         # Add to the database
