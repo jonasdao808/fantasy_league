@@ -62,19 +62,7 @@
             <p>Don't have an account? <a href="{{ url_for('register') }}" class="text-decoration-none">Register</a></p>
         </div>
 
-        <!-- Existing Leagues -->
-        <div class="mt-5">
-            <h2>Existing Leagues</h2>
-            {% if leagues %}
-                <ul class="list-group">
-                    {% for league in leagues %}
-                        <li class="list-group-item">{{ league.league_name }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">No leagues available.</p>
-            {% endif %}
-        </div>
+        
     </div>
 
     <!-- Bootstrap JS -->
