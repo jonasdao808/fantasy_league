@@ -36,6 +36,7 @@
         <!-- League Name -->
         <div class="text-center mb-4">
             <h1 class="display-4">{{ league.league_name }}</h1>
+            <p><strong>League ID:</strong> {{ league.league_ID }}</p>  <!-- Display the League ID -->
         </div>
 
         <!-- Teams Section -->
@@ -63,6 +64,11 @@
 
     <div class="container mt-4 text-center">
         <a href="{{ url_for('drop_page', league_id=league.league_ID) }}" class="btn btn-warning">Drop Players</a>
+    </div>
+
+    <div class="container mt-4 text-center">
+        <a href="{{ url_for('proposed_trades_page', league_id=league.league_ID) }}">View Proposed Trades</a>
+
     </div>
     
     <br/>
