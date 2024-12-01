@@ -38,7 +38,7 @@ class League(db.Model):
     league_ID = db.Column(db.Numeric(8), primary_key=True)  # Numeric type for league ID
     league_name = db.Column(db.String(30), nullable=False)
     league_type = db.Column(db.String(1), default='U')  # Default 'U' for the league type
-    commissioner = db.Column(db.String(20), db.ForeignKey('user.username'))  # Foreign key referencing the user table
+    commissioner = db.Column(db.String(20), db.ForeignKey('user.username'), nullable=False)  # Foreign key referencing the user table
     max_teams = db.Column(db.Integer, nullable=False, default=10)  # Default maximum number of teams
     draft_date = db.Column(db.Date)  # Date field for the draft date
 
@@ -158,7 +158,7 @@ with app.app_context():
             hashed_password = bcrypt.generate_password_hash(user.password).decode('utf-8')
             user.password = hashed_password
             db.session.commit()
-            
+
 # Routes
 @app.route('/', methods=['GET', 'POST'])
 def welcome():
@@ -245,11 +245,18 @@ def home():
     
     # Get all teams that the user is part of, based on 'owner' (the correct column name in the DB)
     user_teams = Team.query.filter_by(owner=user.user_ID).all()  # Using 'owner' instead of 'user_ID'
-
-    # Get the leagues associated with these teams
-    leagues = [team.league for team in user_teams]
     
-    return render_template('home.html', leagues=leagues, is_admin=user.admin)
+    # Get the leagues associated with these teams
+    leagues_for_teams = [team.league for team in user_teams]
+    
+    # Get leagues where the user is the commissioner
+    leagues_for_commissioner = League.query.filter_by(commissioner=user.username).all()
+    
+    # Combine the two lists (remove duplicates using set)
+    all_leagues = list(set(leagues_for_teams + leagues_for_commissioner))
+    
+    return render_template('home.html', leagues=all_leagues, is_admin=user.admin)
+
 
 @app.route('/edit_database')
 def edit_database():
@@ -650,6 +657,43 @@ def proposed_trades_page(league_id):
         return render_template('proposed_trades.html', trades=trade_details, team=team)
 
     return render_template('proposed_trades.html', trades=trade_details, team=team)
+
+@app.route('/create_league', methods=['POST'])
+def create_league():
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+
+    user_id = get_current_user_id()
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('login'))
+
+    # Determine the next league ID
+    last_league = League.query.order_by(League.league_ID.desc()).first()
+    new_league_id = int(last_league.league_ID) + 1 if last_league else 1
+    
+
+    # Create a new league object
+    new_league = League(
+        league_ID=new_league_id,
+        league_name=f"{user.username}'s League",  # Default league name
+        league_type='U',  # Default league type
+        commissioner=user.username,  # Set the current user as commissioner
+        max_teams=10,  # Default max teams
+        draft_date = date.today()
+    )
+    print(f"Commissioner: {user.username}")
+
+
+    # Add and commit to the database
+    db.session.add(new_league)
+    db.session.commit()
+
+    flash(f"League '{new_league.league_name}' created successfully!", 'success')
+    return redirect(url_for('home'))
+
 
 @app.route('/logout')
 def logout():
