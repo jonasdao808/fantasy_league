@@ -234,7 +234,7 @@ def register():
 
     return render_template('register.html')
 
-@app.route('/home')
+@app.route('/home', methods=['GET', 'POST'])
 def home():
     if 'user_id' not in session:
         flash('Please log in first', 'warning')
@@ -243,6 +243,28 @@ def home():
     # Get the user by the ID stored in the session
     user = User.query.get(session['user_id'])
     
+    if request.method == 'POST':
+        league_id = request.form.get('league_id')
+        league = League.query.filter_by(league_ID=league_id).first()
+        
+        if league:
+            # Create a new team for the user in this league
+            new_team = Team(
+                team_name=f"{user.username}'s Team",  # You can modify the team name as needed
+                league_ID=league.league_ID,
+                owner=user.user_ID,
+                status='active',  # Set status as needed
+                total_points_scored=0,
+                league_ranking=0
+            )
+            db.session.add(new_team)
+            db.session.commit()
+            flash(f"You have successfully joined the league: {league.league_name}", 'success')
+        else:
+            flash('League ID does not exist. Please try again.', 'danger')
+        
+        return redirect(url_for('home'))
+
     # Get all teams that the user is part of, based on 'owner' (the correct column name in the DB)
     user_teams = Team.query.filter_by(owner=user.user_ID).all()  # Using 'owner' instead of 'user_ID'
     
@@ -256,6 +278,47 @@ def home():
     all_leagues = list(set(leagues_for_teams + leagues_for_commissioner))
     
     return render_template('home.html', leagues=all_leagues, is_admin=user.admin)
+
+@app.route('/join_league', methods=['POST'])
+def join_league():
+    if 'user_id' not in session:
+        flash('Please log in first', 'warning')
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    league_id = request.form.get('league_id')  # Get the league_id from the form submission
+    
+    # Check if the league exists
+    league = League.query.filter_by(league_ID=league_id).first()
+    
+    if league:
+        # Check if the user is already part of this league (e.g., they already have a team in the league)
+        existing_team = Team.query.filter_by(league_ID=league.league_ID, owner=user.user_ID).first()
+        
+        if existing_team:
+            flash('You are already part of this league!', 'warning')
+        else:
+            # Determine the next league ID
+            last_team = Team.query.order_by(Team.team_ID.desc()).first()
+            new_team_id = int(last_team.team_ID) + 1 if last_team else 1
+            # Create a new team for the user in the league
+            new_team = Team(
+                team_ID = new_team_id,
+                team_name=f"{user.username}'s Team",  # Modify team name as needed
+                league_ID=league_id,
+                owner=user.user_ID,
+                status='A',  # You can adjust the status as needed
+                total_points_scored=0,
+                league_ranking=0
+            )
+            db.session.add(new_team)
+            db.session.commit()
+            flash(f"You have successfully joined the league: {league.league_name}", 'success')
+    
+    else:
+        flash('League ID does not exist. Please try again.', 'danger')
+
+    return redirect(url_for('home'))
 
 
 @app.route('/edit_database')
