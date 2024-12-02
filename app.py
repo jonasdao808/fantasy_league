@@ -503,7 +503,7 @@ def get_current_user_id():
     user_id = session.get("user_id")
     return user_id
 
-@app.route('/league/<int:league_id>')
+@app.route('/league/<int:league_id>', methods=['GET', 'POST'])
 def league_page(league_id):
     # Fetch the league by ID
     league = League.query.get(league_id)
@@ -515,8 +515,29 @@ def league_page(league_id):
     # Get all teams in this league
     teams = Team.query.filter_by(league_ID=league_id).all()
     commissioner = league.commissioner_user.username
+    user = User.query.get(session['user_id'])
+    is_commissioner = (commissioner == user.username)
 
-    return render_template('league.html', league=league, teams=teams, commissioner=commissioner)
+
+    # Handle form submission for renaming the league
+    if request.method == 'POST':
+        new_league_name = request.form.get('new_league_name')
+        if new_league_name:
+            league.league_name = f"{new_league_name} League"
+            db.session.commit()
+            flash('League name updated successfully.', 'success')
+            return redirect(url_for('league_page', league_id=league_id))
+
+    # Get all teams in this league
+    teams = Team.query.filter_by(league_ID=league_id).all()
+
+    return render_template(
+        'league.html',
+        league=league,
+        teams=teams,
+        is_commissioner=is_commissioner,
+        commissioner=commissioner
+    )
 
 @app.route('/team/<int:team_id>')
 def team(team_id):
