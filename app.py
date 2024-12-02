@@ -514,8 +514,9 @@ def league_page(league_id):
 
     # Get all teams in this league
     teams = Team.query.filter_by(league_ID=league_id).all()
+    commissioner = league.commissioner_user.username
 
-    return render_template('league.html', league=league, teams=teams)
+    return render_template('league.html', league=league, teams=teams, commissioner=commissioner)
 
 @app.route('/team/<int:team_id>')
 def team(team_id):
