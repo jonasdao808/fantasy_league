@@ -38,13 +38,16 @@
             <h1 class="display-4">Team: {{ team.team_name }}</h1>
         </div>
 
-        <!-- Players Section -->
-        <h2 class="mt-4">Players</h2>
-        {% if players_in_team %}
+    <!-- Players Section -->
+    <h2 class="mt-4">Players</h2>
+    {% if players_in_team %}
         <ul class="list-group mt-3">
             {% for player in players_in_team %}
                 <li class="list-group-item">
-                    {{ player.full_name }} - {{ player.position }} - {{ player.team }} - {{ player.fantasy_points_scored }}
+                    <a href="{{ url_for('player', player_id=player.player_ID) }}" class="text-decoration-none">
+                        {{ player.full_name }}
+                    </a> 
+                    - {{ player.position }} - {{ player.team }} - {{ player.fantasy_points_scored }}
                     
                     {% if player.team == team.team_name and team.owner == current_user.user_ID %}
                         <!-- Only show the drop button if this player is part of the user's team -->
@@ -79,6 +82,12 @@
         <div class="mt-4">
             <a href="{{ url_for('league_page', league_id=team.league_ID) }}" class="btn btn-secondary">
                 Back to League
+            </a>
+        </div>
+
+        <div class="mt-4">
+            <a href="{{ url_for('propose_new_trade', team_id=team.team_ID) }}" class="btn btn-primary">
+                Propose Trade
             </a>
         </div>
 
