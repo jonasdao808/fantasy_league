@@ -133,16 +133,16 @@ CREATE TABLE trading_teams (
 );
 
 INSERT INTO user (user_ID, full_name, email, username, password, profile_settings) VALUES
-(10000001, 'Yatin Marpu', 'ymarpu@gmail.com', 'ymarpu', 'hashed_pw1', '{"theme": "dark"}'),
-(10000002, 'Hailee Yun', 'hyun@gmaill.com', 'hyun', 'hashed_pw2', '{"theme": "light"}'),
-(10000003, 'Jonas Dao', 'jdao@gmail.com', 'jdao', 'hashed_pw3', '{"theme": "dark"}'),
-(10000004, 'Salim Arfaoui', 'sarfaoui@gmail.com', 'sarfouai', 'hashed_pw4', '{"theme": "light"}'),
-(10000005, 'Dani Smolka', 'dsmolka@gmail.com', 'dsmolka', 'hashed_pw5', '{"theme": "dark"}'),
-(10000006, 'Ryan Wong', 'rwong@gmail.com', 'rwong', 'hashed_pw6', '{"theme": "light"}'),
-(10000007, 'Farabi Azad', 'fazad@gmail.com', 'fazad', 'hashed_pw7', '{"theme": "dark"}'),
-(10000008, 'Lorrie Savage', 'lsavage@gmail.com', 'lsavage', 'hashed_pw8', '{"theme": "light"}'),
-(10000009, 'Siam Huda', 'shuda@gmail.com', 'shuda', 'hashed_pw9', '{"theme": "dark"}'),
-(10000010, 'Haesun Uhm', 'huhm@gmail.com', 'huhm', 'hashed_pw10', '{"theme": "light"}');
+(10000001, 'Yatin Marpu', 'ymarpu@gmail.com', 'ymarpu', 'hashed_pw1', 'Notifications: ON'),
+(10000002, 'Hailee Yun', 'hyun@gmaill.com', 'hyun', 'hashed_pw2', 'Notifications: ON'),
+(10000003, 'Jonas Dao', 'jdao@gmail.com', 'jdao', 'hashed_pw3', 'Notifications: ON'),
+(10000004, 'Salim Arfaoui', 'sarfaoui@gmail.com', 'sarfouai', 'hashed_pw4', 'Notifications: ON'),
+(10000005, 'Dani Smolka', 'dsmolka@gmail.com', 'dsmolka', 'hashed_pw5', 'Notifications: ON'),
+(10000006, 'Ryan Wong', 'rwong@gmail.com', 'rwong', 'hashed_pw6', 'Notifications: ON'),
+(10000007, 'Farabi Azad', 'fazad@gmail.com', 'fazad', 'hashed_pw7', 'Notifications: ON'),
+(10000008, 'Lorrie Savage', 'lsavage@gmail.com', 'lsavage', 'hashed_pw8', 'Notifications: ON'),
+(10000009, 'Siam Huda', 'shuda@gmail.com', 'shuda', 'hashed_pw9', 'Notifications: ON'),
+(10000010, 'Haesun Uhm', 'huhm@gmail.com', 'huhm', 'hashed_pw10', 'Notifications: ON');
 
 INSERT INTO player (player_ID, full_name, sport, position, team, fantasy_points_scored, availability_status) VALUES
 (20000001, 'Justin Jefferson', 'FTB', 'WR', 'Vikings', 300.5, 'U'),
