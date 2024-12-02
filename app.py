@@ -81,6 +81,21 @@ class Player(db.Model):
     def __repr__(self):
         return f'<Player {self.full_name} ({self.player_ID})>'
 
+class PlayerStatistic(db.Model):
+    __tablename__ = 'player_statistic'
+
+    statistic_ID = db.Column(db.Numeric(10), primary_key=True)  # Primary key for the statistics entry
+    player_ID = db.Column(db.Numeric(8), db.ForeignKey('player.player_ID'), nullable=False)  # Foreign key to the player
+    game_date = db.Column(db.Date, nullable=False)  # Date of the game
+    performance_stats = db.Column(db.Text, nullable=True)  # Performance stats (as text)
+    injury_status = db.Column(db.String(1), default='N')  # Injury status, default is 'N' for no injury
+
+    # Relationship to the Player model (to access the player's details)
+    player = db.relationship('Player', backref=db.backref('statistics', lazy=True))
+
+    def __repr__(self):
+        return f'<PlayerStatistic {self.statistic_ID} for Player {self.player_ID} on {self.game_date}>'
+
 class Draft(db.Model):
     __tablename__ = 'drafts'
 
@@ -543,6 +558,18 @@ def match(match_id):
         team2_players=team2_players,
         events=events
     )
+
+@app.route('/player/<int:player_id>')
+def player(player_id):
+    # Fetch player details
+    player = Player.query.get_or_404(player_id)
+    current_user = get_current_user_id()
+
+    # Get the user's team
+    team = Team.query.filter_by(owner=current_user).first()  # Adjust this query based on your schema
+    statistics = PlayerStatistic.query.filter_by(player_ID=player_id).all()
+
+    return render_template('player.html', player=player, statistics=statistics, team_id=team.team_ID)
 
 @app.route('/drop/<int:league_id>')
 def drop_page(league_id):
