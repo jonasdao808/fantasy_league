@@ -80,11 +80,16 @@
             </div>
         {% endif %}
 
-        <!-- create league button -->
+        <!-- Create League Button -->
         <div class="text-center mb-4">
             <form action="{{ url_for('create_league') }}" method="post">
                 <button type="submit" class="btn btn-success">Create League</button>
             </form>
+        </div>
+
+        <!-- Centered "or" text -->
+        <div class="d-flex justify-content-center mb-4">
+            <h3>or</h3>
         </div>
 
         <!-- Join League Form -->
@@ -92,7 +97,7 @@
             <form action="{{ url_for('join_league') }}" method="post">
                 <div class="mb-3">
                     <label for="league_id" class="form-label">Enter League ID</label>
-                    <input type="text" class="form-control" id="league_id" name="league_id" required>
+                    <input type="text" class="form-control w-50 mx-auto" id="league_id" name="league_id" required> <!-- narrower input -->
                 </div>
                 <button type="submit" class="btn btn-primary">Join League</button>
             </form>
